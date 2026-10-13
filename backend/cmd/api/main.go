@@ -1,0 +1,49 @@
+package main
+
+import (
+	"log"
+	"net/http"
+
+	"github.com/gin-gonic/gin"
+
+	"go-trackclientservice/internal/config"
+	"go-trackclientservice/internal/db"
+)
+
+func main() {
+	cfg := config.Load()
+
+	database, err := db.Open(cfg.DSN())
+	if err != nil {
+		log.Fatalf("open mysql: %v", err)
+	}
+	defer database.Close()
+
+	if err := database.Ping(); err != nil {
+		log.Printf("mysql ยังต่อไม่ได้: %v", err)
+		log.Printf("ตรวจว่า MySQL เปิดอยู่ และค่าใน .env ถูก (host=%s port=%s db=%s user=%s)",
+			cfg.DBHost, cfg.DBPort, cfg.DBName, cfg.DBUser)
+	} else {
+		log.Println("mysql: ต่อได้")
+	}
+
+	r := gin.Default()
+
+	r.GET("/health", func(c *gin.Context) {
+		c.JSON(http.StatusOK, gin.H{"ok": true, "service": "api"})
+	})
+
+	r.GET("/health/db", func(c *gin.Context) {
+		if err := database.Ping(); err != nil {
+			c.JSON(http.StatusServiceUnavailable, gin.H{"ok": false, "database": "down", "error": err.Error()})
+			return
+		}
+		c.JSON(http.StatusOK, gin.H{"ok": true, "database": "up"})
+	})
+
+	addr := ":" + cfg.HTTPPort
+	log.Printf("listening on http://127.0.0.1%s", addr)
+	if err := r.Run(addr); err != nil {
+		log.Fatal(err)
+	}
+}
