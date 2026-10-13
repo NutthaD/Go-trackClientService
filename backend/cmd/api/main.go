@@ -3,6 +3,7 @@ package main
 import (
 	"log"
 	"net/http"
+	"strconv"
 
 	"github.com/gin-gonic/gin"
 
@@ -33,6 +34,31 @@ func main() {
 		c.JSON(http.StatusOK, gin.H{"ok": true, "service": "api"})
 	})
 
+	r.GET("/hello", func(c *gin.Context) {
+		c.JSON(http.StatusOK, gin.H{"message": "Hello from my first Go API!"})
+	})
+
+	r.GET("/add/:number", func(c *gin.Context) {
+		number, err := strconv.Atoi(c.Param("number"))
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "number ต้องเป็นจำนวนเต็ม เช่น /add/5"})
+			return
+		}
+
+		total := number + 10
+		message := "ผลรวมน้อยกว่าหรือเท่ากับ 20"
+		if total > 20 {
+			message = "ผลรวมมากกว่า 20"
+		}
+
+		c.JSON(http.StatusOK, gin.H{
+			"number":  number,
+			"added":   10,
+			"total":   total,
+			"message": message,
+		})
+	})
+
 	r.GET("/health/db", func(c *gin.Context) {
 		if err := database.Ping(); err != nil {
 			c.JSON(http.StatusServiceUnavailable, gin.H{"ok": false, "database": "down", "error": err.Error()})
@@ -41,7 +67,11 @@ func main() {
 		c.JSON(http.StatusOK, gin.H{"ok": true, "database": "up"})
 	})
 
-	addr := ":" + cfg.HTTPPort
+	//ฟังทุก network interface
+	//addr := ":" + cfg.HTTPPort
+
+	//ทดสอบจาก browser บนเครื่องตัวเองเท่านั้น
+	addr := "127.0.0.1:" + cfg.HTTPPort
 	log.Printf("listening on http://127.0.0.1%s", addr)
 	if err := r.Run(addr); err != nil {
 		log.Fatal(err)
