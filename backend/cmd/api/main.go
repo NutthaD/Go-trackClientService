@@ -2,11 +2,13 @@ package main
 
 import (
 	"log"
+	"net"
 	"net/http"
 	"strconv"
 
 	"github.com/gin-gonic/gin"
 
+	"go-trackclientservice/internal/clients"
 	"go-trackclientservice/internal/config"
 	"go-trackclientservice/internal/db"
 )
@@ -29,6 +31,9 @@ func main() {
 	}
 
 	r := gin.Default()
+
+	clientHandler := clients.NewHandler(clients.NewRepository(database))
+	clientHandler.RegisterRoutes(r)
 
 	r.GET("/health", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"ok": true, "service": "api"})
@@ -67,12 +72,8 @@ func main() {
 		c.JSON(http.StatusOK, gin.H{"ok": true, "database": "up"})
 	})
 
-	//ฟังทุก network interface
-	//addr := ":" + cfg.HTTPPort
-
-	//ทดสอบจาก browser บนเครื่องตัวเองเท่านั้น
-	addr := "127.0.0.1:" + cfg.HTTPPort
-	log.Printf("listening on http://127.0.0.1%s", addr)
+	addr := net.JoinHostPort(cfg.HTTPHost, cfg.HTTPPort)
+	log.Printf("listening on http://%s", addr)
 	if err := r.Run(addr); err != nil {
 		log.Fatal(err)
 	}

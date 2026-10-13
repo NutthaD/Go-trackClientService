@@ -10,6 +10,7 @@ import (
 // Config คือค่าที่ใช้รันแอป อ่านจาก environment / ไฟล์ .env
 type Config struct {
 	HTTPPort string
+	HTTPHost string
 	DBHost   string
 	DBPort   string
 	DBUser   string
@@ -24,6 +25,7 @@ func Load() Config {
 
 	return Config{
 		HTTPPort: env("HTTP_PORT", "8080"),
+		HTTPHost: env("HTTP_HOST", "127.0.0.1"),
 		DBHost:   env("MYSQL_HOST", "127.0.0.1"),
 		DBPort:   env("MYSQL_PORT", "3306"),
 		DBUser:   env("MYSQL_USER", "root"),
