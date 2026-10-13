@@ -1,0 +1,6 @@
+$kind: http-request
+name: checkAPIRun
+description: ""
+url: http://127.0.0.1:8080/health
+method: GET
+order: 10022

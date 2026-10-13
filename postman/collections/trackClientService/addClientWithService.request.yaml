@@ -1,0 +1,58 @@
+$kind: http-request
+description: ""
+url: http://127.0.0.1:8080/clients
+method: POST
+body:
+  type: json
+  content: "{\r
+
+    \  \"client_id\": \"10814\",\r
+
+    \  \"client_short_name\": \"มหาวิทยาลัยบูรพา\",\r
+
+    \  \"services\": [\r
+
+    \    {\r
+
+    \      \"service_id\": \"00\",\r
+
+    \      \"serv_name\": \"ค่าลงทะเบียน/รักษาสภาพ\"\r
+
+    \    },\r
+
+    \    {\r
+
+    \      \"service_id\": \"02\",\r
+
+    \      \"serv_name\": \"ค่าขึ้นทะเบียนปริญญา\"\r
+
+    \    },\r
+
+    \    {\r
+
+    \      \"service_id\": \"03\",\r
+
+    \      \"serv_name\": \"ค่าสมัครเข้าศึกษา ป.ตรี\"\r
+
+    \    },\r
+
+    \    {\r
+
+    \      \"service_id\": \"05\",\r
+
+    \      \"serv_name\": \"ค่ารายงานตัวนิสิต\"\r
+
+    \    },\r
+
+    \    {\r
+
+    \      \"service_id\": \"07\",\r
+
+    \      \"serv_name\": \"จองเครื่องหมายนิสิต\"\r
+
+    \    }\r
+
+    \  ]\r
+
+    }"
+order: 2000

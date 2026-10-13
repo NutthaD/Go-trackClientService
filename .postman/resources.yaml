@@ -1,0 +1,7 @@
+workspace:
+  id: 05a69353-2908-472b-8892-a0b659816fac
+cloudResources:
+  collections:
+    ../postman/collections/trackClientService: 17955860-ae23d106-975b-411c-ae9b-f5a448a3e410
+  globals:
+    ../postman/globals/workspace.globals.yaml: 15bc7a25-4bae-4ccc-8463-bd5b547b8233
