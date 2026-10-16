@@ -1,5 +1,0 @@
-$kind: http-request
-description: ""
-url: http://127.0.0.1:8080/clients/1234/services/1234_00
-method: DELETE
-order: 9000

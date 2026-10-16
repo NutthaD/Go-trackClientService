@@ -1,0 +1,200 @@
+{
+  "info": {
+    "name": "Track Client Service API",
+    "description": "API requests for the Go Track Client Service backend.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Health",
+      "item": [
+        {
+          "name": "Check API status",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/health"
+          },
+          "response": []
+        },
+        {
+          "name": "Check database connection",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/health/db"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Clients",
+      "item": [
+        {
+          "name": "Create client with services",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"client_id\": \"10814\",\n  \"client_short_name\": \"มหาวิทยาลัยบูรพา\",\n  \"services\": [\n    {\n      \"service_id\": \"00\",\n      \"serv_name\": \"ค่าลงทะเบียน/รักษาสภาพ\"\n    },\n    {\n      \"service_id\": \"02\",\n      \"serv_name\": \"ค่าขึ้นทะเบียนปริญญา\"\n    },\n    {\n      \"service_id\": \"03\",\n      \"serv_name\": \"ค่าสมัครเข้าศึกษา ป.ตรี\"\n    },\n    {\n      \"service_id\": \"05\",\n      \"serv_name\": \"ค่ารายงานตัวนิสิต\"\n    },\n    {\n      \"service_id\": \"07\",\n      \"serv_name\": \"จองเครื่องหมายนิสิต\"\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{baseUrl}}/clients"
+          },
+          "response": []
+        },
+        {
+          "name": "List clients",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/clients?limit=50&offset=0"
+          },
+          "response": []
+        },
+        {
+          "name": "Get client 10814",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/clients/10814"
+          },
+          "response": []
+        },
+        {
+          "name": "Update client name",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"client_short_name\": \"Client ทดสอบ\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{baseUrl}}/clients/123"
+          },
+          "response": []
+        },
+        {
+          "name": "Delete client 1234",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": "{{baseUrl}}/clients/1234"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Services",
+      "item": [
+        {
+          "name": "Add service to client 1234",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"service_id\": \"02\",\n  \"serv_name\": \"testService3\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{baseUrl}}/clients/1234/services"
+          },
+          "response": []
+        },
+        {
+          "name": "Update service name",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"serv_name\": \"new test service name\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{baseUrl}}/clients/1234/services/1234_02"
+          },
+          "response": []
+        },
+        {
+          "name": "Delete service 1234_00",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": "{{baseUrl}}/clients/1234/services/1234_00"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Examples",
+      "item": [
+        {
+          "name": "Hello",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/hello"
+          },
+          "response": []
+        },
+        {
+          "name": "Add 10 to 15",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/add/15"
+          },
+          "response": []
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://127.0.0.1:8080",
+      "type": "string"
+    }
+  ]
+}

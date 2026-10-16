@@ -1,6 +1,0 @@
-$kind: http-request
-name: getOneClientWithService
-description: ""
-url: http://127.0.0.1:8080/clients/10814
-method: GET
-order: 3000
