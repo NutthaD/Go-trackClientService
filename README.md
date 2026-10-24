@@ -27,7 +27,9 @@ go run ./cmd/api
 
 ## ตารางและ API ผู้ว่าจ้าง
 
-หลังสร้างฐานข้อมูล `trackclient` แล้ว ให้รัน `backend/migrations/001_create_clients_services.sql` ใน DBeaver เพื่อสร้างตาราง `clients` และ `services` ตาราง service เชื่อมกับ client ด้วย foreign key และเก็บรหัสจาก Excel เช่น `123_00` ไว้ใน `client_service_id`
+หลังสร้างฐานข้อมูล `trackclient` แล้ว ให้รัน `backend/migrations/001_create_clients_services.sql` ใน DBeaver เพื่อสร้างตาราง `clients` และ `services` ตาราง service เชื่อมกับ client ด้วย foreign key และเก็บรหัสจาก Excel เช่น `123_00` ไว้ใน `client_service_id` พร้อมฟิลด์ UAT และ Production
+
+ถ้าฐานข้อมูลเดิมสร้างจาก migration รุ่นก่อนที่ยังไม่มีฟิลด์ UAT ให้รัน `backend/migrations/002_add_service_uat_fields.sql` เพียงครั้งเดียวแทนการรัน migration 001 ซ้ำ Migration 002 ใช้สำหรับ schema เก่าเท่านั้น; ฐานข้อมูลที่อัปเดตฟิลด์ด้วยตนเองแล้วไม่ต้องรันซ้ำ
 
 API ทุกเส้นทางคืนข้อมูล JSON ยกเว้นการลบที่สำเร็จจะคืน HTTP `204` โดยไม่มี body:
 
@@ -39,7 +41,7 @@ API ทุกเส้นทางคืนข้อมูล JSON ยกเว�
 | `PATCH` | `/clients/{client_id}` | เปลี่ยนชื่อ client เท่านั้น |
 | `DELETE` | `/clients/{client_id}` | ลบ client ได้เมื่อไม่มี service เหลือ |
 | `POST` | `/clients/{client_id}/services` | เพิ่ม service ให้ client |
-| `PATCH` | `/clients/{client_id}/services/{client_service_id}` | เปลี่ยนชื่อ service เท่านั้น |
+| `PATCH` | `/clients/{client_id}/services/{client_service_id}` | เปลี่ยนเฉพาะฟิลด์ service ที่ส่งมา |
 | `DELETE` | `/clients/{client_id}/services/{client_service_id}` | ลบ service หนึ่งรายการ |
 
 ตัวอย่างเพิ่ม client พร้อม service:
@@ -52,7 +54,15 @@ API ทุกเส้นทางคืนข้อมูล JSON ยกเว�
     {
       "client_service_id": "123_00",
       "service_id": "00",
-      "serv_name": "ระบบ A"
+      "serv_name": "ระบบ A",
+      "uat_status": "Waiting test",
+      "tested_by": "Tester A",
+      "pos_os_nss": "Windows",
+      "testcase_result_link": "https://example.com/test-result",
+      "week": "1",
+      "uat_submitted_date": "2026-10-24",
+      "service_type": "NPE",
+      "production_status": "NOT_PROD"
     }
   ]
 }
@@ -60,9 +70,26 @@ API ทุกเส้นทางคืนข้อมูล JSON ยกเว�
 
 `client_service_id` จะถูกสร้างจาก `client_id` และ `service_id` เป็น `123_00` ถ้าส่งมาด้วย API จะตรวจว่าตรงกันหรือไม่ การเพิ่ม client และ services ใช้ transaction: ถ้าส่วนใดส่วนหนึ่งผิดพลาด จะยกเลิกการเพิ่มทั้งชุด
 
+ฟิลด์ `uat_status` รับค่า `Waiting test`, `Block`, `Block by defect`, `Defect`, `Pass`, `Cancel` หรือ `Hold testing` และถ้าไม่ส่งจะเริ่มเป็น `Waiting test` ส่วน `production_status` รับ `PROD`, `NOT_PROD` หรือ `NOT_APPLICABLE` และค่าเริ่มต้นคือ `NOT_PROD` ฟิลด์ข้อมูลเพิ่มเติมที่ไม่ส่งสามารถว่างได้ วันที่ `uat_submitted_date` ใช้รูปแบบ `YYYY-MM-DD`
+
+ตัวอย่างแก้เฉพาะ UAT status โดยไม่เปลี่ยนฟิลด์อื่น:
+
+```http
+PATCH /clients/123/services/123_00
+Content-Type: application/json
+```
+
+```json
+{
+  "uat_status": "Pass"
+}
+```
+
+`PATCH` รับฟิลด์ service ใดก็ได้ที่ต้องการเปลี่ยน เช่น `serv_name`, `uat_status`, `tested_by`, `pos_os_nss`, `testcase_result_link`, `week`, `uat_submitted_date`, `service_type` และ `production_status` ฟิลด์ที่ไม่ส่งจะคงค่าเดิม ส่ง `""` ในฟิลด์ข้อความที่อนุญาตให้ว่างเพื่อล้างค่านั้นเป็น `NULL`
+
 การแก้ไข client และ service แยก endpoint กัน เพื่อให้เปลี่ยนเฉพาะข้อมูลที่ต้องการได้ การลบ client ที่ยังมี services จะตอบ `409 Conflict`; ต้องลบ services ก่อน ข้อมูลซ้ำตอบ `409 Conflict` และ ID ที่ไม่พบตอบ `404 Not Found`
 
-> Migration ใช้ `CREATE TABLE IF NOT EXISTS` เพื่อไม่สร้างตารางซ้ำ แต่ไม่ได้แก้ตารางเดิม หากสร้างตารางด้วยมือไว้แล้ว ให้ตรวจว่าคอลัมน์และชนิดตรงกับ migration ก่อนใช้งาน API
+> Migration 001 ใช้ `CREATE TABLE IF NOT EXISTS` เพื่อไม่สร้างตารางซ้ำ แต่ไม่ได้แก้ตารางเดิม หากตารางถูกสร้างด้วยมือหรือจาก schema รุ่นเก่า ให้ตรวจว่ามีคอลัมน์ตามรายการข้างต้นก่อนใช้งาน API; ใช้ migration 002 เฉพาะกับ schema รุ่นเก่าที่ยังไม่มีคอลัมน์ UAT
 
 ## MySQL บนแต่ละเครื่อง
 

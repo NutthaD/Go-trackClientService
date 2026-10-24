@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
 	"unicode/utf8"
 
 	"github.com/gin-gonic/gin"
@@ -24,7 +25,7 @@ type Store interface {
 	List(context.Context, int, int) ([]Client, error)
 	Get(context.Context, string) (Client, error)
 	UpdateClient(context.Context, string, string) error
-	UpdateService(context.Context, string, string, string) error
+	UpdateService(context.Context, string, string, UpdateServiceRequest) error
 	DeleteService(context.Context, string, string) error
 	DeleteClient(context.Context, string) error
 }
@@ -67,7 +68,7 @@ func (h *Handler) createClient(c *gin.Context) {
 		service := &request.Services[i]
 		service.ServiceID = strings.TrimSpace(service.ServiceID)
 		service.ServName = strings.TrimSpace(service.ServName)
-		if err := validateServiceFields(service.ServiceID, service.ServName); err != nil {
+		if err := normalizeCreateService(service); err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("services[%d]: %s", i, err)})
 			return
 		}
@@ -105,7 +106,7 @@ func (h *Handler) createService(c *gin.Context) {
 	}
 	request.ServiceID = strings.TrimSpace(request.ServiceID)
 	request.ServName = strings.TrimSpace(request.ServName)
-	if err := validateServiceFields(request.ServiceID, request.ServName); err != nil {
+	if err := normalizeCreateService(&request); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
@@ -201,23 +202,15 @@ func (h *Handler) updateService(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "request body ต้องเป็น JSON ที่ถูกต้อง"})
 		return
 	}
-	if request.ServName == nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "ต้องส่ง serv_name"})
-		return
-	}
-	servName := strings.TrimSpace(*request.ServName)
-	if err := validateServiceName(servName); err != nil {
+	if err := normalizeUpdateService(&request); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	if err := h.store.UpdateService(c.Request.Context(), clientID, serviceKey, servName); err != nil {
+	if err := h.store.UpdateService(c.Request.Context(), clientID, serviceKey, request); err != nil {
 		h.writeStoreError(c, "update service", err)
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{"data": gin.H{
-		"client_service_id": serviceKey,
-		"serv_name":         servName,
-	}})
+	c.JSON(http.StatusOK, gin.H{"data": serviceUpdateResponse(clientID, serviceKey, request)})
 }
 
 func (h *Handler) deleteService(c *gin.Context) {
@@ -288,6 +281,160 @@ func validateServiceFields(serviceID, servName string) error {
 		return err
 	}
 	return validateServiceName(servName)
+}
+
+func normalizeCreateService(request *CreateServiceRequest) error {
+	if err := validateServiceFields(request.ServiceID, request.ServName); err != nil {
+		return err
+	}
+	if request.UATStatus == "" {
+		request.UATStatus = "Waiting test"
+	}
+	if !validUATStatus(request.UATStatus) {
+		return errors.New("uat_status ไม่อยู่ในรายการสถานะที่รองรับ")
+	}
+	if request.ProductionStatus == "" {
+		request.ProductionStatus = "NOT_PROD"
+	}
+	if !validProductionStatus(request.ProductionStatus) {
+		return errors.New("production_status ต้องเป็น PROD, NOT_PROD หรือ NOT_APPLICABLE")
+	}
+	return normalizeOptionalServiceFields(true,
+		&request.TestedBy,
+		&request.POSOSNSS,
+		&request.TestcaseResultLink,
+		&request.Week,
+		&request.UATSubmittedDate,
+		&request.ServiceType,
+	)
+}
+
+func normalizeUpdateService(request *UpdateServiceRequest) error {
+	if request.ServName != nil {
+		*request.ServName = strings.TrimSpace(*request.ServName)
+		if err := validateServiceName(*request.ServName); err != nil {
+			return err
+		}
+	}
+	if request.UATStatus != nil && !validUATStatus(*request.UATStatus) {
+		return errors.New("uat_status ไม่อยู่ในรายการสถานะที่รองรับ")
+	}
+	if request.ProductionStatus != nil && !validProductionStatus(*request.ProductionStatus) {
+		return errors.New("production_status ต้องเป็น PROD, NOT_PROD หรือ NOT_APPLICABLE")
+	}
+	if request.ServName == nil && request.UATStatus == nil &&
+		request.TestedBy == nil && request.POSOSNSS == nil &&
+		request.TestcaseResultLink == nil && request.Week == nil &&
+		request.UATSubmittedDate == nil && request.ServiceType == nil &&
+		request.ProductionStatus == nil {
+		return errors.New("ต้องส่งฟิลด์ที่ต้องการแก้ไขอย่างน้อยหนึ่งฟิลด์")
+	}
+	return normalizeOptionalServiceFields(false,
+		&request.TestedBy,
+		&request.POSOSNSS,
+		&request.TestcaseResultLink,
+		&request.Week,
+		&request.UATSubmittedDate,
+		&request.ServiceType,
+	)
+}
+
+func normalizeOptionalServiceFields(clearEmpty bool, fields ...**string) error {
+	limits := []struct {
+		field string
+		limit int
+	}{
+		{field: "tested_by", limit: 150},
+		{field: "pos_os_nss", limit: 100},
+		{field: "testcase_result_link", limit: 2048},
+		{field: "week", limit: 20},
+		{field: "uat_submitted_date", limit: 10},
+		{field: "service_type", limit: 100},
+	}
+	for i, field := range fields {
+		if *field == nil {
+			continue
+		}
+		value := strings.TrimSpace(**field)
+		if value == "" {
+			if clearEmpty {
+				*field = nil
+			} else {
+				**field = ""
+			}
+			continue
+		}
+		if utf8.RuneCountInString(value) > limits[i].limit {
+			return fmt.Errorf("%s ยาวได้ไม่เกิน %d ตัวอักษร", limits[i].field, limits[i].limit)
+		}
+		if limits[i].field == "uat_submitted_date" {
+			if _, err := time.Parse("2006-01-02", value); err != nil {
+				return errors.New("uat_submitted_date ต้องใช้รูปแบบ YYYY-MM-DD")
+			}
+		}
+		**field = value
+	}
+	return nil
+}
+
+func validUATStatus(status string) bool {
+	switch status {
+	case "Waiting test", "Block", "Block by defect", "Defect", "Pass", "Cancel", "Hold testing":
+		return true
+	default:
+		return false
+	}
+}
+
+func validProductionStatus(status string) bool {
+	switch status {
+	case "PROD", "NOT_PROD", "NOT_APPLICABLE":
+		return true
+	default:
+		return false
+	}
+}
+
+func serviceUpdateResponse(clientID, serviceKey string, request UpdateServiceRequest) gin.H {
+	response := gin.H{
+		"client_service_id": serviceKey,
+		"service_id":        strings.TrimPrefix(serviceKey, clientID+"_"),
+	}
+	if request.ServName != nil {
+		response["serv_name"] = *request.ServName
+	}
+	if request.UATStatus != nil {
+		response["uat_status"] = *request.UATStatus
+	}
+	if request.TestedBy != nil {
+		response["tested_by"] = nonEmptyStringPointer(request.TestedBy)
+	}
+	if request.POSOSNSS != nil {
+		response["pos_os_nss"] = nonEmptyStringPointer(request.POSOSNSS)
+	}
+	if request.TestcaseResultLink != nil {
+		response["testcase_result_link"] = nonEmptyStringPointer(request.TestcaseResultLink)
+	}
+	if request.Week != nil {
+		response["week"] = nonEmptyStringPointer(request.Week)
+	}
+	if request.UATSubmittedDate != nil {
+		response["uat_submitted_date"] = nonEmptyStringPointer(request.UATSubmittedDate)
+	}
+	if request.ServiceType != nil {
+		response["service_type"] = nonEmptyStringPointer(request.ServiceType)
+	}
+	if request.ProductionStatus != nil {
+		response["production_status"] = *request.ProductionStatus
+	}
+	return response
+}
+
+func nonEmptyStringPointer(value *string) *string {
+	if value == nil || *value == "" {
+		return nil
+	}
+	return value
 }
 
 func validateServiceName(servName string) error {

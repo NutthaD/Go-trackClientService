@@ -7,9 +7,17 @@ type Client struct {
 }
 
 type Service struct {
-	ClientServiceID string `json:"client_service_id"`
-	ServiceID       string `json:"service_id"`
-	ServName        string `json:"serv_name"`
+	ClientServiceID    string  `json:"client_service_id"`
+	ServiceID          string  `json:"service_id"`
+	ServName           string  `json:"serv_name"`
+	UATStatus          string  `json:"uat_status"`
+	TestedBy           *string `json:"tested_by"`
+	POSOSNSS           *string `json:"pos_os_nss"`
+	TestcaseResultLink *string `json:"testcase_result_link"`
+	Week               *string `json:"week"`
+	UATSubmittedDate   *string `json:"uat_submitted_date"`
+	ServiceType        *string `json:"service_type"`
+	ProductionStatus   string  `json:"production_status"`
 }
 
 type CreateClientRequest struct {
@@ -19,9 +27,17 @@ type CreateClientRequest struct {
 }
 
 type CreateServiceRequest struct {
-	ClientServiceID string `json:"client_service_id"`
-	ServiceID       string `json:"service_id"`
-	ServName        string `json:"serv_name"`
+	ClientServiceID    string  `json:"client_service_id"`
+	ServiceID          string  `json:"service_id"`
+	ServName           string  `json:"serv_name"`
+	UATStatus          string  `json:"uat_status"`
+	TestedBy           *string `json:"tested_by"`
+	POSOSNSS           *string `json:"pos_os_nss"`
+	TestcaseResultLink *string `json:"testcase_result_link"`
+	Week               *string `json:"week"`
+	UATSubmittedDate   *string `json:"uat_submitted_date"`
+	ServiceType        *string `json:"service_type"`
+	ProductionStatus   string  `json:"production_status"`
 }
 
 type UpdateClientRequest struct {
@@ -29,5 +45,13 @@ type UpdateClientRequest struct {
 }
 
 type UpdateServiceRequest struct {
-	ServName *string `json:"serv_name"`
+	ServName           *string `json:"serv_name"`
+	UATStatus          *string `json:"uat_status"`
+	TestedBy           *string `json:"tested_by"`
+	POSOSNSS           *string `json:"pos_os_nss"`
+	TestcaseResultLink *string `json:"testcase_result_link"`
+	Week               *string `json:"week"`
+	UATSubmittedDate   *string `json:"uat_submitted_date"`
+	ServiceType        *string `json:"service_type"`
+	ProductionStatus   *string `json:"production_status"`
 }

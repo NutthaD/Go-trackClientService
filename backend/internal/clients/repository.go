@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"strings"
 
 	mysql "github.com/go-sql-driver/mysql"
 )
@@ -44,15 +45,18 @@ func (r *Repository) Create(ctx context.Context, request CreateClientRequest) (C
 		Services:        make([]Service, 0, len(request.Services)),
 	}
 	for _, requestedService := range request.Services {
-		service := Service{
-			ClientServiceID: clientServiceID(request.ClientID, requestedService.ServiceID),
-			ServiceID:       requestedService.ServiceID,
-			ServName:        requestedService.ServName,
-		}
+		service := serviceFromCreateRequest(request.ClientID, requestedService)
 		_, err = tx.ExecContext(ctx,
-			`INSERT INTO services (client_service_id, client_id, service_id, serv_name)
-			 VALUES (?, ?, ?, ?)`,
+			`INSERT INTO services (
+				client_service_id, client_id, service_id, serv_name, uat_status,
+				tested_by, pos_os_nss, testcase_result_link, week,
+				uat_submitted_date, service_type, production_status
+			) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 			service.ClientServiceID, request.ClientID, service.ServiceID, service.ServName,
+			service.UATStatus, nullableDBValue(service.TestedBy), nullableDBValue(service.POSOSNSS),
+			nullableDBValue(service.TestcaseResultLink), nullableDBValue(service.Week),
+			nullableDBValue(service.UATSubmittedDate), nullableDBValue(service.ServiceType),
+			service.ProductionStatus,
 		)
 		if err != nil {
 			return Client{}, translateMySQLError(err)
@@ -67,15 +71,18 @@ func (r *Repository) Create(ctx context.Context, request CreateClientRequest) (C
 }
 
 func (r *Repository) CreateService(ctx context.Context, clientID string, request CreateServiceRequest) (Service, error) {
-	service := Service{
-		ClientServiceID: clientServiceID(clientID, request.ServiceID),
-		ServiceID:       request.ServiceID,
-		ServName:        request.ServName,
-	}
+	service := serviceFromCreateRequest(clientID, request)
 	_, err := r.db.ExecContext(ctx,
-		`INSERT INTO services (client_service_id, client_id, service_id, serv_name)
-		 VALUES (?, ?, ?, ?)`,
+		`INSERT INTO services (
+			client_service_id, client_id, service_id, serv_name, uat_status,
+			tested_by, pos_os_nss, testcase_result_link, week,
+			uat_submitted_date, service_type, production_status
+		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 		service.ClientServiceID, clientID, service.ServiceID, service.ServName,
+		service.UATStatus, nullableDBValue(service.TestedBy), nullableDBValue(service.POSOSNSS),
+		nullableDBValue(service.TestcaseResultLink), nullableDBValue(service.Week),
+		nullableDBValue(service.UATSubmittedDate), nullableDBValue(service.ServiceType),
+		service.ProductionStatus,
 	)
 	if err != nil {
 		return Service{}, translateMySQLError(err)
@@ -86,7 +93,9 @@ func (r *Repository) CreateService(ctx context.Context, clientID string, request
 func (r *Repository) List(ctx context.Context, limit, offset int) ([]Client, error) {
 	rows, err := r.db.QueryContext(ctx, `
 		SELECT c.client_id, c.client_short_name,
-		       s.client_service_id, s.service_id, s.serv_name
+		       s.client_service_id, s.service_id, s.serv_name, s.uat_status,
+		       s.tested_by, s.pos_os_nss, s.testcase_result_link, s.week,
+		       s.uat_submitted_date, s.service_type, s.production_status
 		FROM (
 			SELECT client_id, client_short_name
 			FROM clients
@@ -107,7 +116,9 @@ func (r *Repository) List(ctx context.Context, limit, offset int) ([]Client, err
 func (r *Repository) Get(ctx context.Context, clientID string) (Client, error) {
 	rows, err := r.db.QueryContext(ctx, `
 		SELECT c.client_id, c.client_short_name,
-		       s.client_service_id, s.service_id, s.serv_name
+		       s.client_service_id, s.service_id, s.serv_name, s.uat_status,
+		       s.tested_by, s.pos_os_nss, s.testcase_result_link, s.week,
+		       s.uat_submitted_date, s.service_type, s.production_status
 		FROM clients AS c
 		LEFT JOIN services AS s ON s.client_id = c.client_id
 		WHERE c.client_id = ?
@@ -155,12 +166,54 @@ func (r *Repository) UpdateClient(ctx context.Context, clientID, shortName strin
 	return nil
 }
 
-func (r *Repository) UpdateService(ctx context.Context, clientID, clientServiceID, servName string) error {
-	result, err := r.db.ExecContext(ctx,
-		`UPDATE services SET serv_name = ?
-		 WHERE client_id = ? AND client_service_id = ?`,
-		servName, clientID, clientServiceID,
+func (r *Repository) UpdateService(ctx context.Context, clientID, clientServiceID string, request UpdateServiceRequest) error {
+	updates := make([]string, 0, 9)
+	args := make([]any, 0, 11)
+	if request.ServName != nil {
+		updates = append(updates, "serv_name = ?")
+		args = append(args, *request.ServName)
+	}
+	if request.UATStatus != nil {
+		updates = append(updates, "uat_status = ?")
+		args = append(args, *request.UATStatus)
+	}
+	if request.TestedBy != nil {
+		updates = append(updates, "tested_by = ?")
+		args = append(args, nullableDBValue(request.TestedBy))
+	}
+	if request.POSOSNSS != nil {
+		updates = append(updates, "pos_os_nss = ?")
+		args = append(args, nullableDBValue(request.POSOSNSS))
+	}
+	if request.TestcaseResultLink != nil {
+		updates = append(updates, "testcase_result_link = ?")
+		args = append(args, nullableDBValue(request.TestcaseResultLink))
+	}
+	if request.Week != nil {
+		updates = append(updates, "`week` = ?")
+		args = append(args, nullableDBValue(request.Week))
+	}
+	if request.UATSubmittedDate != nil {
+		updates = append(updates, "uat_submitted_date = ?")
+		args = append(args, nullableDBValue(request.UATSubmittedDate))
+	}
+	if request.ServiceType != nil {
+		updates = append(updates, "service_type = ?")
+		args = append(args, nullableDBValue(request.ServiceType))
+	}
+	if request.ProductionStatus != nil {
+		updates = append(updates, "production_status = ?")
+		args = append(args, *request.ProductionStatus)
+	}
+	if len(updates) == 0 {
+		return errors.New("no service fields to update")
+	}
+	args = append(args, clientID, clientServiceID)
+	query := fmt.Sprintf(
+		"UPDATE services SET %s WHERE client_id = ? AND client_service_id = ?",
+		strings.Join(updates, ", "),
 	)
+	result, err := r.db.ExecContext(ctx, query, args...)
 	if err != nil {
 		return fmt.Errorf("update service: %w", err)
 	}
@@ -248,7 +301,14 @@ func scanClients(rows *sql.Rows) ([]Client, error) {
 	for rows.Next() {
 		var clientID, shortName string
 		var clientServiceID, serviceID, serviceName sql.NullString
-		if err := rows.Scan(&clientID, &shortName, &clientServiceID, &serviceID, &serviceName); err != nil {
+		var uatStatus, productionStatus sql.NullString
+		var testedBy, posOSNSS, testcaseResultLink, week, serviceType sql.NullString
+		var submittedDate sql.NullTime
+		if err := rows.Scan(
+			&clientID, &shortName, &clientServiceID, &serviceID, &serviceName,
+			&uatStatus, &testedBy, &posOSNSS, &testcaseResultLink, &week,
+			&submittedDate, &serviceType, &productionStatus,
+		); err != nil {
 			return nil, fmt.Errorf("scan client row: %w", err)
 		}
 
@@ -264,9 +324,17 @@ func scanClients(rows *sql.Rows) ([]Client, error) {
 		}
 		if clientServiceID.Valid {
 			clients[index].Services = append(clients[index].Services, Service{
-				ClientServiceID: clientServiceID.String,
-				ServiceID:       serviceID.String,
-				ServName:        serviceName.String,
+				ClientServiceID:    clientServiceID.String,
+				ServiceID:          serviceID.String,
+				ServName:           serviceName.String,
+				UATStatus:          uatStatus.String,
+				TestedBy:           nullableString(testedBy),
+				POSOSNSS:           nullableString(posOSNSS),
+				TestcaseResultLink: nullableString(testcaseResultLink),
+				Week:               nullableString(week),
+				UATSubmittedDate:   nullableDate(submittedDate),
+				ServiceType:        nullableString(serviceType),
+				ProductionStatus:   productionStatus.String,
 			})
 		}
 	}
@@ -291,4 +359,42 @@ func translateMySQLError(err error) error {
 
 func clientServiceID(clientID, serviceID string) string {
 	return clientID + "_" + serviceID
+}
+
+func serviceFromCreateRequest(clientID string, request CreateServiceRequest) Service {
+	return Service{
+		ClientServiceID:    clientServiceID(clientID, request.ServiceID),
+		ServiceID:          request.ServiceID,
+		ServName:           request.ServName,
+		UATStatus:          request.UATStatus,
+		TestedBy:           request.TestedBy,
+		POSOSNSS:           request.POSOSNSS,
+		TestcaseResultLink: request.TestcaseResultLink,
+		Week:               request.Week,
+		UATSubmittedDate:   request.UATSubmittedDate,
+		ServiceType:        request.ServiceType,
+		ProductionStatus:   request.ProductionStatus,
+	}
+}
+
+func nullableDBValue(value *string) any {
+	if value == nil || strings.TrimSpace(*value) == "" {
+		return nil
+	}
+	return *value
+}
+
+func nullableString(value sql.NullString) *string {
+	if !value.Valid {
+		return nil
+	}
+	return &value.String
+}
+
+func nullableDate(value sql.NullTime) *string {
+	if !value.Valid {
+		return nil
+	}
+	formatted := value.Time.Format("2006-01-02")
+	return &formatted
 }

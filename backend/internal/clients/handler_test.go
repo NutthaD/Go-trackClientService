@@ -53,3 +53,74 @@ func TestValidateServiceKey(t *testing.T) {
 		})
 	}
 }
+
+func TestNormalizeCreateServiceDefaults(t *testing.T) {
+	request := CreateServiceRequest{
+		ServiceID: "00",
+		ServName:  "Service",
+	}
+	if err := normalizeCreateService(&request); err != nil {
+		t.Fatalf("normalizeCreateService() error = %v", err)
+	}
+	if request.UATStatus != "Waiting test" {
+		t.Errorf("UATStatus = %q, want %q", request.UATStatus, "Waiting test")
+	}
+	if request.ProductionStatus != "NOT_PROD" {
+		t.Errorf("ProductionStatus = %q, want %q", request.ProductionStatus, "NOT_PROD")
+	}
+}
+
+func TestNormalizeUpdateServiceValidatesFields(t *testing.T) {
+	tests := []struct {
+		name      string
+		request   UpdateServiceRequest
+		wantError bool
+	}{
+		{
+			name: "updates only status",
+			request: UpdateServiceRequest{
+				UATStatus: stringPointer("Pass"),
+			},
+		},
+		{
+			name: "rejects unsupported status",
+			request: UpdateServiceRequest{
+				UATStatus: stringPointer("Done"),
+			},
+			wantError: true,
+		},
+		{
+			name: "rejects invalid date",
+			request: UpdateServiceRequest{
+				UATSubmittedDate: stringPointer("24/10/2026"),
+			},
+			wantError: true,
+		},
+		{
+			name: "keeps empty optional field to clear it",
+			request: UpdateServiceRequest{
+				TestedBy: stringPointer(""),
+			},
+		},
+		{
+			name:      "requires at least one field",
+			request:   UpdateServiceRequest{},
+			wantError: true,
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			err := normalizeUpdateService(&test.request)
+			if (err != nil) != test.wantError {
+				t.Fatalf("normalizeUpdateService() error = %v, wantError %t", err, test.wantError)
+			}
+			if test.name == "keeps empty optional field to clear it" && test.request.TestedBy == nil {
+				t.Fatal("empty field was cleared from the request; PATCH must preserve it to write SQL NULL")
+			}
+		})
+	}
+}
+
+func stringPointer(value string) *string {
+	return &value
+}
