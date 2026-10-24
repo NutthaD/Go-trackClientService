@@ -1,0 +1,12 @@
+$kind: http-request
+description: ""
+url: http://127.0.0.1:8080/clients/123
+method: PATCH
+body:
+  type: json
+  content: "{\r
+
+    \  \"client_short_name\": \"Client ทดสอบ\"\r
+
+    }"
+order: 5000
