@@ -1,7 +1,10 @@
 import { useEffect, useMemo, useState } from 'react'
 import type { FormEvent, ReactNode } from 'react'
+import DatePicker, { registerLocale } from 'react-datepicker'
+import { enGB } from 'date-fns/locale/en-GB'
 import { getClients, updateService } from './api'
 import type { Client, Service } from './types'
+import 'react-datepicker/dist/react-datepicker.css'
 import './App.css'
 
 type ServiceForm = {
@@ -23,6 +26,8 @@ type ServiceRow = {
 
 type SortKey = 'client_id' | 'client_short_name' | 'service_id' | 'serv_name'
 type SortDirection = 'asc' | 'desc'
+
+registerLocale('en-GB', enGB)
 
 const UAT_STATUSES = [
   'Waiting test',
@@ -58,15 +63,12 @@ function emptyForm(service: Service): ServiceForm {
 function formatDateForInput(value: string | null) {
   if (!value) return ''
   const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value)
-  return match ? `${match[3]}/${match[2]}/${match[1]}` : value
+  return match ? `${match[3]}/${match[2]}/${match[1]}` : ''
 }
 
 function formatDateForAPI(value: string) {
-  const trimmedValue = value.trim()
-  if (!trimmedValue) return ''
-
-  const match = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(trimmedValue)
-  if (!match) return null
+  const match = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(value.trim())
+  if (!match) return value.trim() ? null : ''
 
   const [, day, month, year] = match
   const date = new Date(Date.UTC(Number(year), Number(month) - 1, Number(day)))
@@ -80,13 +82,21 @@ function formatDateForAPI(value: string) {
   return `${year}-${month}-${day}`
 }
 
+function parseDateForPicker(value: string) {
+  const isoDate = formatDateForAPI(value)
+  if (!isoDate) return null
+  const [year, month, day] = isoDate.split('-').map(Number)
+  return new Date(year, month - 1, day)
+}
+
 function statusClass(status: string) {
   switch (status) {
     case 'Pass':
       return 'status-pill status-pill--green'
     case 'Block':
-    case 'Defect':
       return 'status-pill status-pill--pink'
+    case 'Defect':
+      return 'status-pill status-pill--yellow'
     case 'Block by defect':
       return 'status-pill status-pill--yellow'
     case 'Working':
@@ -235,7 +245,7 @@ function App() {
 
     const submittedDate = formatDateForAPI(form.uat_submitted_date)
     if (submittedDate === null) {
-      setSaveError('วันที่ส่ง UAT ต้องเป็นรูปแบบ dd/mm/yyyy และเป็นวันที่ที่ถูกต้อง')
+      setSaveError('วันที่ส่ง UAT ต้องเป็นวันที่ถูกต้องในรูปแบบ dd/mm/yyyy (ค.ศ.)')
       return
     }
 
@@ -406,12 +416,12 @@ function App() {
                     return (
                     <tr className={isClientStart ? 'client-group-start' : ''} key={service.client_service_id}>
                       <td className="client-id-cell">{isClientStart ? client.client_id : ''}</td>
-                      <td className="client-name-cell">{isClientStart ? client.client_short_name : ''}</td>
-                      <td className="service-id-cell">{service.service_id}</td>
-                      <td className="service-name-cell">{service.serv_name}</td>
-                      <td><span className={statusClass(service.uat_status)}>{service.uat_status}</span></td>
-                      <td>{service.tested_by || <span className="muted-value">ยังไม่ระบุ</span>}</td>
-                      <td>{service.week || <span className="muted-value">—</span>}</td>
+                      <td className="client-name-cell">{isClientStart && <span className="table-cell-truncate" title={client.client_short_name}>{client.client_short_name}</span>}</td>
+                      <td className="service-id-cell" title={service.service_id}>{service.service_id}</td>
+                      <td className="service-name-cell" title={service.serv_name}>{service.serv_name}</td>
+                      <td title={service.uat_status}><span className={statusClass(service.uat_status)}>{service.uat_status}</span></td>
+                      <td className="tested-by-cell" title={service.tested_by ?? undefined}>{service.tested_by || <span className="muted-value">ยังไม่ระบุ</span>}</td>
+                      <td className="week-cell" title={service.week ?? undefined}>{service.week || <span className="muted-value">—</span>}</td>
                       <td>{formatDate(service.uat_submitted_date)}</td>
                       <td><ProductionBadge status={service.production_status} /></td>
                       <td className="action-cell">
@@ -480,16 +490,10 @@ function App() {
                   <input maxLength={20} value={form.week} onChange={(event) => updateFormField('week', event.target.value)} placeholder="เช่น Week 1" />
                 </label>
                 <label className="form-field">
-                  <span>วันที่ส่ง UAT</span>
-                  <input
-                    type="text"
-                    inputMode="numeric"
-                    maxLength={10}
-                    pattern="([0-9]{2}/[0-9]{2}/[0-9]{4})?"
-                    title="กรอกวันที่ในรูปแบบ dd/mm/yyyy เช่น 25/10/2026"
+                  <span>วันที่ส่ง UAT (ค.ศ.)</span>
+                  <GregorianDatePicker
                     value={form.uat_submitted_date}
-                    onChange={(event) => updateFormField('uat_submitted_date', event.target.value)}
-                    placeholder="dd/mm/yyyy"
+                    onChange={(value) => updateFormField('uat_submitted_date', value)}
                   />
                 </label>
                 <label className="form-field">
@@ -513,6 +517,40 @@ function App() {
         </div>
       )}
     </main>
+  )
+}
+
+function GregorianDatePicker({
+  value,
+  onChange,
+}: {
+  value: string
+  onChange: (value: string) => void
+}) {
+  return (
+    <DatePicker
+      selected={parseDateForPicker(value)}
+      onChange={(date: Date | null) => {
+        if (!date) {
+          onChange('')
+          return
+        }
+        onChange(
+          [
+            String(date.getDate()).padStart(2, '0'),
+            String(date.getMonth() + 1).padStart(2, '0'),
+            String(date.getFullYear()).padStart(4, '0'),
+          ].join('/'),
+        )
+      }}
+      dateFormat="dd/MM/yyyy"
+      locale="en-GB"
+      placeholderText="dd/mm/yyyy"
+      autoComplete="off"
+      isClearable
+      showPopperArrow={false}
+      aria-label="วันที่ส่ง UAT (dd/mm/yyyy ค.ศ.)"
+    />
   )
 }
 
@@ -663,9 +701,15 @@ function ProductionBadge({ status }: { status: string }) {
 
 function formatDate(date: string | null) {
   if (!date) return <span className="muted-value">—</span>
-  const parsed = new Date(`${date}T00:00:00`)
+  const parsed = new Date(`${date}T00:00:00Z`)
   if (Number.isNaN(parsed.getTime())) return date
-  return new Intl.DateTimeFormat('th-TH', { day: 'numeric', month: 'short', year: 'numeric' }).format(parsed)
+  return new Intl.DateTimeFormat('en-GB', {
+    calendar: 'gregory',
+    day: '2-digit',
+    month: '2-digit',
+    timeZone: 'UTC',
+    year: 'numeric',
+  }).format(parsed)
 }
 
 function SearchIcon() {
@@ -687,6 +731,7 @@ function ClockIcon() {
 function AlertIcon() {
   return <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="m10.3 4.8-7 12.1A1.4 1.4 0 0 0 4.5 19h15a1.4 1.4 0 0 0 1.2-2.1l-7-12.1a2 2 0 0 0-3.4 0Z" stroke="currentColor" strokeWidth="1.7" strokeLinejoin="round" /><path d="M12 9v4.2M12 16.5v.1" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" /></svg>
 }
+
 
 function CheckIcon() {
   return <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="m5 12.5 4.4 4.3L19.5 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>

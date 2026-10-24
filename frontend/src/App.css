@@ -274,34 +274,15 @@ h1 {
   background: var(--green-100);
 }
 
-.progress-breakdown {
-  grid-template-columns: 1fr 1fr;
-}
-
-.release-breakdown {
-  grid-template-columns: 1.4fr 1fr;
-}
-
-.release-breakdown-item--ready strong {
-  color: var(--purple-700);
-}
-
-.release-breakdown-item--production strong {
-  color: var(--green-700);
-}
-
-.progress-breakdown-item--waiting strong {
-  color: var(--yellow-700);
-}
-
-.progress-breakdown-item--working strong {
-  color: var(--blue-700);
-}
-
 .issue-breakdown {
   display: grid;
   grid-template-columns: 0.75fr 1.35fr 0.7fr;
   margin-top: 17px;
+}
+
+.issue-breakdown.progress-breakdown,
+.issue-breakdown.release-breakdown {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
 .issue-breakdown-item {
@@ -346,7 +327,20 @@ h1 {
 }
 
 .issue-breakdown-item--defect strong {
+  color: var(--yellow-700);
+}
+
+.issue-breakdown .progress-breakdown-item--waiting strong {
+  color: var(--purple-700);
+}
+
+.issue-breakdown .progress-breakdown-item--working strong {
   color: var(--blue-700);
+}
+
+.issue-breakdown .release-breakdown-item--ready strong,
+.issue-breakdown .release-breakdown-item--production strong {
+  color: var(--green-700);
 }
 
 .table-panel {
@@ -577,9 +571,19 @@ tbody tr:hover {
 }
 
 .client-name-cell {
+  max-width: 220px;
   min-width: 170px;
+  overflow: hidden;
   color: #443b53;
   font-weight: 600;
+  text-overflow: ellipsis;
+}
+
+.table-cell-truncate {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .service-id-cell {
@@ -591,6 +595,18 @@ tbody tr:hover {
   max-width: 240px;
   overflow: hidden;
   color: #5c5668;
+  text-overflow: ellipsis;
+}
+
+.tested-by-cell {
+  max-width: 180px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.week-cell {
+  max-width: 130px;
+  overflow: hidden;
   text-overflow: ellipsis;
 }
 
@@ -926,6 +942,44 @@ tbody tr:hover {
   min-height: 39px;
   padding: 0 10px;
   font-size: 12px;
+}
+
+.react-datepicker-wrapper,
+.react-datepicker__input-container {
+  width: 100%;
+}
+
+.form-field .react-datepicker__input-container input {
+  width: 100%;
+  min-height: 39px;
+  padding: 0 10px;
+  font-size: 12px;
+}
+
+.react-datepicker {
+  border-color: #e8e4ed;
+  box-shadow: 0 12px 32px rgba(49, 35, 68, 0.16);
+  font-family: inherit;
+}
+
+.react-datepicker__header {
+  background: #faf8fd;
+  border-bottom-color: #eee9f3;
+}
+
+.react-datepicker__current-month,
+.react-datepicker__day-name {
+  color: var(--purple-900);
+}
+
+.react-datepicker__day--selected,
+.react-datepicker__day--keyboard-selected {
+  background: var(--purple-600);
+}
+
+.react-datepicker__day--selected:hover,
+.react-datepicker__day--keyboard-selected:hover {
+  background: var(--purple-700);
 }
 
 .form-field input:focus,

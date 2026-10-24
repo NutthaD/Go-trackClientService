@@ -28,7 +28,10 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
     } catch {
       message = responseText
     }
-    throw new Error(message || `คำขอไม่สำเร็จ (${response.status})`)
+    if (response.status >= 500 && message === 'เกิดข้อผิดพลาดภายในระบบ') {
+      message += ' — ตรวจรายละเอียด "update service failed" ใน terminal ของ Go API'
+    }
+    throw new Error(`${message || 'คำขอไม่สำเร็จ'} (HTTP ${response.status})`)
   }
 
   return response.json() as Promise<T>
