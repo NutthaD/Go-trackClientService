@@ -70,6 +70,17 @@ func TestNormalizeCreateServiceDefaults(t *testing.T) {
 	}
 }
 
+func TestNormalizeCreateServiceAcceptsWorkingStatus(t *testing.T) {
+	request := CreateServiceRequest{
+		ServiceID: "00",
+		ServName:  "Service",
+		UATStatus: "Working",
+	}
+	if err := normalizeCreateService(&request); err != nil {
+		t.Fatalf("normalizeCreateService() rejected Working: %v", err)
+	}
+}
+
 func TestNormalizeUpdateServiceValidatesFields(t *testing.T) {
 	tests := []struct {
 		name      string
@@ -80,6 +91,12 @@ func TestNormalizeUpdateServiceValidatesFields(t *testing.T) {
 			name: "updates only status",
 			request: UpdateServiceRequest{
 				UATStatus: stringPointer("Pass"),
+			},
+		},
+		{
+			name: "updates status to Working",
+			request: UpdateServiceRequest{
+				UATStatus: stringPointer("Working"),
 			},
 		},
 		{
