@@ -156,6 +156,29 @@
           "response": []
         },
         {
+          "name": "Update service UAT status",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"uat_status\": \"Pass\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{baseUrl}}/clients/1234/services/1234_02"
+          },
+          "response": []
+        },
+        {
           "name": "Delete service 1234_00",
           "request": {
             "method": "DELETE",
