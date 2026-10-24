@@ -192,7 +192,10 @@ function App() {
     })
   }, [visibleRows, sort])
 
-  const passCount = allRows.filter(({ service }) => service.uat_status === 'Pass').length
+  const readyForProductionCount = allRows.filter(
+    ({ service }) =>
+      service.uat_status === 'Pass' && service.production_status === 'NOT_PROD',
+  ).length
   const waitingCount = allRows.filter(
     ({ service }) => service.uat_status === 'Waiting test',
   ).length
@@ -321,7 +324,10 @@ function App() {
             blockByDefectCount={blockByDefectCount}
             defectCount={defectCount}
           />
-          <StatCard label="ผ่าน UAT" value={passCount} detail="พร้อมขึ้น Production" tone="green" icon={<CheckIcon />} />
+          <ReleaseStatCard
+            readyCount={readyForProductionCount}
+            productionCount={productionCount}
+          />
         </section>
 
         <section className="table-panel">
@@ -329,10 +335,6 @@ function App() {
             <div>
               <h2>Service List</h2>
               <p>กำลังแสดง {sortedRows.length} จาก {allRows.length} รายการ · จัดกลุ่มตามผู้ว่าจ้าง</p>
-            </div>
-            <div className="panel-summary">
-              <span className="summary-dot" />
-              {productionCount} รายการขึ้น Production แล้ว
             </div>
           </div>
 
@@ -557,6 +559,33 @@ function ProgressStatCard({
         <div className="issue-breakdown-item progress-breakdown-item--working">
           <strong>{workingCount}</strong>
           <span>Working</span>
+        </div>
+      </div>
+    </article>
+  )
+}
+
+function ReleaseStatCard({
+  readyCount,
+  productionCount,
+}: {
+  readyCount: number
+  productionCount: number
+}) {
+  return (
+    <article className="stat-card stat-card--release">
+      <div className="stat-topline">
+        <span>สถานะการขึ้น Production</span>
+        <span className="stat-icon"><CheckIcon /></span>
+      </div>
+      <div className="issue-breakdown release-breakdown">
+        <div className="issue-breakdown-item release-breakdown-item--ready">
+          <strong>{readyCount}</strong>
+          <span>Pass UAT · รอขึ้น Prod.</span>
+        </div>
+        <div className="issue-breakdown-item release-breakdown-item--production">
+          <strong>{productionCount}</strong>
+          <span>ขึ้น Prod. แล้ว</span>
         </div>
       </div>
     </article>

@@ -269,8 +269,25 @@ h1 {
   background: var(--yellow-100);
 }
 
+.stat-card--release .stat-icon {
+  color: var(--green-700);
+  background: var(--green-100);
+}
+
 .progress-breakdown {
   grid-template-columns: 1fr 1fr;
+}
+
+.release-breakdown {
+  grid-template-columns: 1.4fr 1fr;
+}
+
+.release-breakdown-item--ready strong {
+  color: var(--purple-700);
+}
+
+.release-breakdown-item--production strong {
+  color: var(--green-700);
 }
 
 .progress-breakdown-item--waiting strong {
