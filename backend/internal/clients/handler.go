@@ -379,7 +379,7 @@ func normalizeOptionalServiceFields(clearEmpty bool, fields ...**string) error {
 
 func validUATStatus(status string) bool {
 	switch status {
-	case "Waiting test", "Block", "Block by defect", "Defect", "Pass", "Cancel", "Hold testing":
+	case "Waiting test", "Working", "Block", "Block by defect", "Defect", "Pass", "Cancel", "Hold testing":
 		return true
 	default:
 		return false

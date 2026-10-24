@@ -29,7 +29,7 @@ go run ./cmd/api
 
 หลังสร้างฐานข้อมูล `trackclient` แล้ว ให้รัน `backend/migrations/001_create_clients_services.sql` ใน DBeaver เพื่อสร้างตาราง `clients` และ `services` ตาราง service เชื่อมกับ client ด้วย foreign key และเก็บรหัสจาก Excel เช่น `123_00` ไว้ใน `client_service_id` พร้อมฟิลด์ UAT และ Production
 
-ถ้าฐานข้อมูลเดิมสร้างจาก migration รุ่นก่อนที่ยังไม่มีฟิลด์ UAT ให้รัน `backend/migrations/002_add_service_uat_fields.sql` เพียงครั้งเดียวแทนการรัน migration 001 ซ้ำ Migration 002 ใช้สำหรับ schema เก่าเท่านั้น; ฐานข้อมูลที่อัปเดตฟิลด์ด้วยตนเองแล้วไม่ต้องรันซ้ำ
+ถ้าฐานข้อมูลเดิมสร้างจาก migration รุ่นก่อนที่ยังไม่มีฟิลด์ UAT ให้รัน `backend/migrations/002_add_service_uat_fields.sql` เพียงครั้งเดียวแทนการรัน migration 001 ซ้ำ แล้วรัน `backend/migrations/003_add_working_uat_status.sql` เพื่อเพิ่มสถานะ Working หากฐานข้อมูลมีฟิลด์ UAT อยู่แล้ว ให้รัน migration 003 อย่างเดียว ฐานข้อมูลใหม่ที่สร้างจาก migration 001 รุ่นปัจจุบันมีสถานะ Working อยู่แล้ว
 
 API ทุกเส้นทางคืนข้อมูล JSON ยกเว้นการลบที่สำเร็จจะคืน HTTP `204` โดยไม่มี body:
 
@@ -70,7 +70,7 @@ API ทุกเส้นทางคืนข้อมูล JSON ยกเว�
 
 `client_service_id` จะถูกสร้างจาก `client_id` และ `service_id` เป็น `123_00` ถ้าส่งมาด้วย API จะตรวจว่าตรงกันหรือไม่ การเพิ่ม client และ services ใช้ transaction: ถ้าส่วนใดส่วนหนึ่งผิดพลาด จะยกเลิกการเพิ่มทั้งชุด
 
-ฟิลด์ `uat_status` รับค่า `Waiting test`, `Block`, `Block by defect`, `Defect`, `Pass`, `Cancel` หรือ `Hold testing` และถ้าไม่ส่งจะเริ่มเป็น `Waiting test` ส่วน `production_status` รับ `PROD`, `NOT_PROD` หรือ `NOT_APPLICABLE` และค่าเริ่มต้นคือ `NOT_PROD` ฟิลด์ข้อมูลเพิ่มเติมที่ไม่ส่งสามารถว่างได้ วันที่ `uat_submitted_date` ใช้รูปแบบ `YYYY-MM-DD`
+ฟิลด์ `uat_status` รับค่า `Waiting test`, `Working`, `Block`, `Block by defect`, `Defect`, `Pass`, `Cancel` หรือ `Hold testing` และถ้าไม่ส่งจะเริ่มเป็น `Waiting test` ส่วน `production_status` รับ `PROD`, `NOT_PROD` หรือ `NOT_APPLICABLE` และค่าเริ่มต้นคือ `NOT_PROD` ฟิลด์ข้อมูลเพิ่มเติมที่ไม่ส่งสามารถว่างได้ วันที่ `uat_submitted_date` ใช้รูปแบบ `YYYY-MM-DD`
 
 ตัวอย่างแก้เฉพาะ UAT status โดยไม่เปลี่ยนฟิลด์อื่น:
 
