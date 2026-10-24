@@ -1,0 +1,63 @@
+:root {
+  font-family: 'Segoe UI', 'Leelawadee UI', Tahoma, sans-serif;
+  color: #302c3b;
+  background: #f8f7fb;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  font-optical-sizing: auto;
+  font-weight: 400;
+
+  --purple-900: #44365e;
+  --purple-700: #7357a6;
+  --purple-600: #8568b8;
+  --purple-100: #f0ebf8;
+  --pink-100: #fbeaf0;
+  --pink-700: #b95c7b;
+  --yellow-100: #fbf3d9;
+  --yellow-700: #987a2e;
+  --blue-100: #e8f1fb;
+  --blue-700: #587ba3;
+  --green-100: #e8f4ed;
+  --green-700: #4e8765;
+  --text-main: #302c3b;
+  --text-muted: #8b8794;
+  --border: #eeecf2;
+  --surface: #ffffff;
+  --shadow: 0 10px 32px rgba(57, 43, 79, 0.055);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  min-width: 360px;
+  min-height: 100vh;
+  margin: 0;
+}
+
+button,
+input,
+select {
+  font: inherit;
+}
+
+button {
+  cursor: pointer;
+}
+
+button:disabled {
+  cursor: not-allowed;
+  opacity: 0.65;
+}
+
+::selection {
+  color: var(--purple-900);
+  background: #e7ddf5;
+}
+
+:focus-visible {
+  outline: 3px solid rgba(133, 104, 184, 0.35);
+  outline-offset: 2px;
+}

@@ -4,13 +4,30 @@
 
 - Backend: Go
 - Database: MySQL Server (ติดตั้งบนเครื่อง ไม่ใช้ Docker)
-- Frontend: React (ยังไม่สร้างในขั้นต้น)
+- Frontend: React + TypeScript + Vite
 
 ## ขั้นที่ทำแล้ว
 
 1. โครงโฟลเดอร์ + Go module + สคริปต์สร้างฐานข้อมูลบน MySQL Server
 2. API ตรวจสถานะ (`/health`, `/health/db`)
 3. API จัดการผู้ว่าจ้างและ service (`/clients`)
+4. Frontend เบื้องต้นสำหรับค้นหา ติดตาม และแก้ไขข้อมูล service
+
+## รัน frontend
+
+ต้องเปิด Go API ไว้ก่อน โดยรัน backend ตามขั้นตอนด้านบน จากนั้นเปิดอีกหน้าต่าง Terminal:
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+เปิด URL ที่ Vite แสดง (ปกติคือ http://localhost:5173) หน้าเว็บจะเรียก Go API ผ่าน proxy ที่ตั้งไว้ใน Vite โดยส่ง `/api/clients` ไปยัง `http://127.0.0.1:8080/clients` จึงไม่ต้องตั้งค่า CORS สำหรับการพัฒนาในเครื่องนี้
+
+หน้าแรกแสดงสรุปสถานะ UAT, ค้นหาด้วยชื่อหรือรหัส, กรองตามสถานะ และแก้ไขข้อมูลบริการได้จากปุ่ม “แก้ไข” การแก้ไขจะบันทึกผ่าน `PATCH /clients/{client_id}/services/{client_service_id}` ทันที
+
+> การตั้งค่า proxy นี้ใช้สำหรับรัน frontend และ backend บนเครื่องเดียวกันเพื่อพัฒนาเท่านั้น การเปิดให้เครื่องอื่นใช้งานหรือ deploy แยกเครื่องจะต้องกำหนด URL และวิธีเชื่อมต่อ frontend/API เพิ่มเติม
 
 ## รัน backend
 
