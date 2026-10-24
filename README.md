@@ -4,13 +4,30 @@
 
 - Backend: Go
 - Database: MySQL Server (ติดตั้งบนเครื่อง ไม่ใช้ Docker)
-- Frontend: React (ยังไม่สร้างในขั้นต้น)
+- Frontend: React + TypeScript + Vite
 
 ## ขั้นที่ทำแล้ว
 
 1. โครงโฟลเดอร์ + Go module + สคริปต์สร้างฐานข้อมูลบน MySQL Server
 2. API ตรวจสถานะ (`/health`, `/health/db`)
 3. API จัดการผู้ว่าจ้างและ service (`/clients`)
+4. Frontend เบื้องต้นสำหรับค้นหา ติดตาม และแก้ไขข้อมูล service
+
+## รัน frontend
+
+ต้องเปิด Go API ไว้ก่อน โดยรัน backend ตามขั้นตอนด้านบน จากนั้นเปิดอีกหน้าต่าง Terminal:
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+เปิด URL ที่ Vite แสดง (ปกติคือ http://localhost:5173) หน้าเว็บจะเรียก Go API ผ่าน proxy ที่ตั้งไว้ใน Vite โดยส่ง `/api/clients` ไปยัง `http://127.0.0.1:8080/clients` จึงไม่ต้องตั้งค่า CORS สำหรับการพัฒนาในเครื่องนี้
+
+หน้าแรกแสดงสรุปสถานะ UAT, ค้นหาด้วยชื่อหรือรหัส, กรองตามสถานะ และแก้ไขข้อมูลบริการได้จากปุ่ม “แก้ไข” การแก้ไขจะบันทึกผ่าน `PATCH /clients/{client_id}/services/{client_service_id}` ทันที
+
+> การตั้งค่า proxy นี้ใช้สำหรับรัน frontend และ backend บนเครื่องเดียวกันเพื่อพัฒนาเท่านั้น การเปิดให้เครื่องอื่นใช้งานหรือ deploy แยกเครื่องจะต้องกำหนด URL และวิธีเชื่อมต่อ frontend/API เพิ่มเติม
 
 ## รัน backend
 
@@ -29,7 +46,7 @@ go run ./cmd/api
 
 หลังสร้างฐานข้อมูล `trackclient` แล้ว ให้รัน `backend/migrations/001_create_clients_services.sql` ใน DBeaver เพื่อสร้างตาราง `clients` และ `services` ตาราง service เชื่อมกับ client ด้วย foreign key และเก็บรหัสจาก Excel เช่น `123_00` ไว้ใน `client_service_id` พร้อมฟิลด์ UAT และ Production
 
-ถ้าฐานข้อมูลเดิมสร้างจาก migration รุ่นก่อนที่ยังไม่มีฟิลด์ UAT ให้รัน `backend/migrations/002_add_service_uat_fields.sql` เพียงครั้งเดียวแทนการรัน migration 001 ซ้ำ Migration 002 ใช้สำหรับ schema เก่าเท่านั้น; ฐานข้อมูลที่อัปเดตฟิลด์ด้วยตนเองแล้วไม่ต้องรันซ้ำ
+ถ้าฐานข้อมูลเดิมสร้างจาก migration รุ่นก่อนที่ยังไม่มีฟิลด์ UAT ให้รัน `backend/migrations/002_add_service_uat_fields.sql` เพียงครั้งเดียวแทนการรัน migration 001 ซ้ำ แล้วรัน `backend/migrations/003_add_working_uat_status.sql` เพื่อเพิ่มสถานะ Working หากฐานข้อมูลมีฟิลด์ UAT อยู่แล้ว ให้รัน migration 003 อย่างเดียว ฐานข้อมูลใหม่ที่สร้างจาก migration 001 รุ่นปัจจุบันมีสถานะ Working อยู่แล้ว
 
 API ทุกเส้นทางคืนข้อมูล JSON ยกเว้นการลบที่สำเร็จจะคืน HTTP `204` โดยไม่มี body:
 
@@ -70,7 +87,7 @@ API ทุกเส้นทางคืนข้อมูล JSON ยกเว�
 
 `client_service_id` จะถูกสร้างจาก `client_id` และ `service_id` เป็น `123_00` ถ้าส่งมาด้วย API จะตรวจว่าตรงกันหรือไม่ การเพิ่ม client และ services ใช้ transaction: ถ้าส่วนใดส่วนหนึ่งผิดพลาด จะยกเลิกการเพิ่มทั้งชุด
 
-ฟิลด์ `uat_status` รับค่า `Waiting test`, `Block`, `Block by defect`, `Defect`, `Pass`, `Cancel` หรือ `Hold testing` และถ้าไม่ส่งจะเริ่มเป็น `Waiting test` ส่วน `production_status` รับ `PROD`, `NOT_PROD` หรือ `NOT_APPLICABLE` และค่าเริ่มต้นคือ `NOT_PROD` ฟิลด์ข้อมูลเพิ่มเติมที่ไม่ส่งสามารถว่างได้ วันที่ `uat_submitted_date` ใช้รูปแบบ `YYYY-MM-DD`
+ฟิลด์ `uat_status` รับค่า `Waiting test`, `Working`, `Block`, `Block by defect`, `Defect`, `Pass`, `Cancel` หรือ `Hold testing` และถ้าไม่ส่งจะเริ่มเป็น `Waiting test` ส่วน `production_status` รับ `PROD`, `NOT_PROD` หรือ `NOT_APPLICABLE` และค่าเริ่มต้นคือ `NOT_PROD` ฟิลด์ข้อมูลเพิ่มเติมที่ไม่ส่งสามารถว่างได้ วันที่ `uat_submitted_date` ใช้รูปแบบ `YYYY-MM-DD`
 
 ตัวอย่างแก้เฉพาะ UAT status โดยไม่เปลี่ยนฟิลด์อื่น:
 

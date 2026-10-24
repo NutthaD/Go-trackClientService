@@ -15,6 +15,7 @@ CREATE TABLE IF NOT EXISTS services (
   serv_name VARCHAR(255) NOT NULL,
   uat_status ENUM(
     'Waiting test',
+    'Working',
     'Block',
     'Block by defect',
     'Defect',
